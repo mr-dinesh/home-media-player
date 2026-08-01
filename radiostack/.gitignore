@@ -1,0 +1,12 @@
+# Rendered from icecast.xml.template by scripts/gen-icecast-config.sh.
+# Contains real credentials — never commit it.
+icecast/icecast.xml
+
+# Local secrets
+.env
+
+# Runtime state and dependencies
+web/node_modules/
+navidrome/data/
+music/
+home/

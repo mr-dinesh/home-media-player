@@ -1,0 +1,68 @@
+services:
+
+  icecast:
+    image: moul/icecast
+    container_name: icecast
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./icecast/icecast.xml:/etc/icecast2/icecast.xml:ro
+    networks:
+      - radionet
+
+  liquidsoap:
+    image: savonet/liquidsoap:v2.2.5
+    container_name: liquidsoap
+    restart: unless-stopped
+    depends_on:
+      - icecast
+    ports:
+      - "1234:1234"
+    environment:
+      # Read from .env; must match Icecast's <source-password>.
+      ICECAST_SOURCE_PASSWORD: "${ICECAST_SOURCE_PASSWORD:?set it in .env}"
+    volumes:
+      - ./liquidsoap/radio.liq:/etc/liquidsoap/radio.liq:ro
+      - /home/tester/Music:/music:ro
+      - ./playlists:/playlists
+    command: ["/etc/liquidsoap/radio.liq"]
+    networks:
+      - radionet
+
+  web:
+    image: node:20-alpine
+    container_name: radio-web
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app
+      - /home/tester/Music:/music
+      - ./playlists:/playlists
+    command: sh -c "npm install && node server.js"
+    networks:
+      - radionet
+
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    restart: unless-stopped
+    ports:
+      - "4533:4533"
+    environment:
+      ND_SCANSCHEDULE: "1h"
+      ND_LOGLEVEL: "info"
+      ND_SESSIONTIMEOUT: "24h"
+      ND_BASEURL: ""
+      ND_MUSICFOLDER: "/music"
+    volumes:
+      - ./navidrome/data:/data
+      - /home/tester/Music:/music:ro
+    networks:
+      - radionet
+
+networks:
+  radionet:
+    driver: bridge
