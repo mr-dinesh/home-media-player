@@ -37,4 +37,14 @@ envsubst '${ICECAST_SOURCE_PASSWORD} ${ICECAST_RELAY_PASSWORD} ${ICECAST_ADMIN_U
   < "$TEMPLATE" > "$OUTPUT"
 chmod 600 "$OUTPUT"
 
-echo "wrote $OUTPUT (mode 600)"
+# Icecast in the container runs as icecast2 (uid 101 in moul/icecast), not as
+# us, so mode 600 alone makes it fail with "Permission denied". Grant just that
+# uid read access instead of opening the file to everyone.
+ICECAST_CONTAINER_UID="${ICECAST_CONTAINER_UID:-101}"
+if ! command -v setfacl >/dev/null; then
+  echo "error: setfacl not found (apt install acl); icecast cannot read $OUTPUT without it." >&2
+  exit 1
+fi
+setfacl -m "u:${ICECAST_CONTAINER_UID}:r" "$OUTPUT"
+
+echo "wrote $OUTPUT (mode 600, plus read for container uid $ICECAST_CONTAINER_UID)"

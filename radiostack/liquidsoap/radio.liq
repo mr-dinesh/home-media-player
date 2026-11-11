@@ -21,7 +21,7 @@ radio = playlist(
   reload=10,
   reload_mode="watch",
   mode="randomize",
-  "/playlists/default.m3u"
+  "/playlists/Sivers.m3u"
 )
 
 radio = mksafe(radio)
