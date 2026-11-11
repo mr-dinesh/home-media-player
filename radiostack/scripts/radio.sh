@@ -34,8 +34,14 @@ streaming() {  # true if Icecast is serving MP3 on /stream
   [ "$(curl -s -o /dev/null -m 3 -w '%{content_type}' "$STREAM" 2>/dev/null)" = "audio/mpeg" ]
 }
 
-now_playing() {
-  dc logs --tail 300 liquidsoap 2>/dev/null | grep -o 'Now playing:.*' | tail -1 | sed 's/^Now playing: *//'
+now_playing() {  # tags if the file has them, else the file name
+  local logs title
+  logs=$(dc logs --tail 300 liquidsoap 2>/dev/null)
+  title=$(grep -o 'Now playing:.*' <<<"$logs" | tail -1 | sed 's/^Now playing: *//')
+  if [ -z "${title//[ -]/}" ]; then  # untagged files log "Now playing:  -"
+    title=$(grep -o 'Prepared "[^"]*"' <<<"$logs" | tail -1 | sed 's#^Prepared ".*/##; s#\.[^.]*"$##')
+  fi
+  echo "${title:-unknown}"
 }
 
 current_playlist() { grep -o '"/playlists/[^"]*\.m3u"' "$LIQ" | head -1 | sed 's#"/playlists/##; s#\.m3u"##'; }
