@@ -1,6 +1,6 @@
 # SIGNAL — Home Radio Streaming Server
 
-A self-hosted Icecast2 streaming server with a web-based playlist manager.
+A self-hosted Icecast2 streaming server, run with the `radio` command.
 Runs entirely on Docker. No cloud costs. Works on any Linux laptop/PC.
 
 ```
@@ -8,7 +8,6 @@ Architecture:
   Music files (local) → Liquidsoap (encoder) → Icecast2 (stream server)
                                                       ↓
                                         Listeners (browser / VLC / any player)
-                                        Admin UI  (playlist manager)
 ```
 
 ---
@@ -70,32 +69,31 @@ and the generator will reject them.
 ### 3. Start the stack
 
 ```bash
-docker compose up -d
+ln -s "$PWD/scripts/radio.sh" ~/.local/bin/radio   # once
+radio up
 ```
 
-That's it. Three containers start:
-- **icecast** on port 8000  — the actual stream server
-- **liquidsoap**            — reads playlists, encodes, sends to Icecast
-- **radio-web** on port 3000 — playlist manager UI
+Three containers start:
+- **icecast** on port 8000 — the actual stream server
+- **liquidsoap**           — reads the playlist, encodes, sends to Icecast
+- **navidrome** on port 4533 — music library for Subsonic apps
 
 ---
 
-## Using the Web UI
+## The `radio` command
 
-Open `http://localhost:3000` in your browser.
+```
+radio [up]          start it, wait for audio, print where to listen
+radio down          stop it
+radio status        containers, stream, playlist, now playing, listeners
+radio now           current track
+radio skip          next track
+radio play [name]   switch to playlists/<name>.m3u (no name: list them)
+radio toggle        up if down, down if up (used by the desktop icon)
+```
 
-**Admin console (playlist manager):**
-- Upload music via the library panel (right side)
-- Create playlists, add tracks from the library
-- Click **Broadcast** to make a playlist go live
-- Liquidsoap detects the change within ~10 seconds
-
-**Listener player:**
-- `http://localhost:3000/listen.html`
-- Share this with anyone on your network
-
-**Raw stream URL (for VLC, apps, etc.):**
-- `http://YOUR_IP:8000/stream`
+**Stream URL (for VLC, apps, etc.):**
+- `http://YOUR_IP:8000/stream` (`radio up` prints the exact LAN and Tailscale URLs)
 
 **Icecast admin UI:**
 - `http://localhost:8000/admin`
@@ -119,16 +117,13 @@ Port 4533 is Navidrome (for Subsonic apps like Symfonium/Tempo), not a VLC strea
 
 ## Adding Music
 
-**Via web UI:** Upload directly from the Library panel.
+Music comes from `~/Music` on the host, mounted at `/music` in the containers.
 
-**Via command line (bulk add):**
-```bash
-# Copy music into the music folder
-cp ~/Music/*.mp3 ~/radiostack/music/
-
-# Restart liquidsoap to rescan
-docker compose restart liquidsoap
-```
+1. Copy files into `~/Music` (or a subfolder).
+2. Add them to a playlist in `playlists/`, using the container path
+   (`/music/Artist - Track.mp3`, not the host path).
+3. `radio play <name>` to switch to it. Liquidsoap reloads the current
+   playlist every 10 seconds, so edits to it need no restart.
 
 **Supported formats:** MP3, AAC, OGG, FLAC, M4A
 
@@ -165,13 +160,6 @@ radiostack/
 │   └── icecast.xml          ← Icecast2 config (passwords here)
 ├── liquidsoap/
 │   └── radio.liq            ← playlist engine config
-├── web/
-│   ├── server.js            ← Node.js API + web server
-│   ├── package.json
-│   └── public/
-│       ├── index.html       ← admin playlist manager
-│       └── listen.html      ← public listener player
-├── music/                   ← your audio files live here
 ├── playlists/               ← .m3u playlist files live here
 └── scripts/
     ├── radio.sh             ← `radio` command (up/down/status/skip/play)
@@ -191,11 +179,6 @@ radiostack/
 - File paths inside .m3u must be `/music/filename.mp3` (Docker mount path)
 - Check: `docker compose logs liquidsoap`
 
-**Can't reach from outside:**
-- Verify port forwarding on router
-- Test with: `curl http://YOUR_PUBLIC_IP:8000/` from a different network
-- Check if ACT is blocking: try from mobile data
-
-**Web UI uploads fail:**
-- Check disk space: `df -h`
-- Check music dir permissions: `ls -la music/`
+**Can't reach from the phone:**
+- Check both devices are up: `tailscale status`
+- Use the Tailscale URL that `radio up` prints, port 8000 (4533 is Navidrome)

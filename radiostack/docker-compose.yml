@@ -18,8 +18,8 @@ services:
     depends_on:
       - icecast
     ports:
-      # Telnet control has no auth, so publish it on the host only.
-      # The web UI reaches it over the docker network (liquidsoap:1234).
+      # Telnet control has no auth, so publish it on the host only
+      # (scripts/radio.sh uses it for skip).
       - "127.0.0.1:1234:1234"
     environment:
       # Read from .env; must match Icecast's <source-password>.
@@ -29,21 +29,6 @@ services:
       - /home/tester/Music:/music:ro
       - ./playlists:/playlists
     command: ["/etc/liquidsoap/radio.liq"]
-    networks:
-      - radionet
-
-  web:
-    image: node:20-alpine
-    container_name: radio-web
-    restart: unless-stopped
-    working_dir: /app
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./web:/app
-      - /home/tester/Music:/music
-      - ./playlists:/playlists
-    command: sh -c "npm install && node server.js"
     networks:
       - radionet
 

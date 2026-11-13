@@ -6,7 +6,6 @@ icecast/icecast.xml
 .env
 
 # Runtime state and dependencies
-web/node_modules/
 navidrome/data/
 music/
 home/

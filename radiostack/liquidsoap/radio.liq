@@ -44,6 +44,5 @@ output.icecast(
   name="My Home Radio",
   description="Personal playlist stream",
   genre="Mixed",
-  url="http://localhost:3000",
   radio
 )
