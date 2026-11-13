@@ -103,75 +103,17 @@ Open `http://localhost:3000` in your browser.
 
 ---
 
-## Accessing from outside your home (ACT Fibernet)
+## Listening from outside your home (Tailscale)
 
-### Step 1 — Port forward on your router
+No port forwarding or dynamic DNS: the box and the phone are on the same
+Tailscale network, so the stream is reachable at the box's Tailscale IP
+from anywhere, and nowhere else.
 
-Log in to your router (usually http://192.168.1.1):
-- Forward **port 8000** (TCP) → your laptop's local IP
-- Forward **port 3000** (TCP) → your laptop's local IP
+1. Install Tailscale on the server and the phone, signed in to the same account.
+2. `radio up` prints the address, e.g. `http://100.x.y.z:8000/stream`.
+3. On the phone, VLC → Open network stream → that URL (works on mobile data).
 
-Find your laptop's local IP:
-```bash
-ip addr show | grep "inet " | grep -v 127.0.0.1
-```
-
-### Step 2 — Dynamic DNS with DuckDNS (free)
-
-1. Go to https://www.duckdns.org and sign up
-2. Create a subdomain: `myradio.duckdns.org`
-3. Copy your token
-4. Edit `scripts/duckdns.sh` — fill in SUBDOMAIN and TOKEN
-5. Make it executable and add to cron:
-
-```bash
-chmod +x scripts/duckdns.sh
-
-# Open crontab
-crontab -e
-
-# Add this line (runs every 5 minutes):
-*/5 * * * * /home/youruser/radiostack/scripts/duckdns.sh
-```
-
-Now your stream is accessible at:
-- `http://myradio.duckdns.org:8000/stream`
-- `http://myradio.duckdns.org:3000/listen.html`
-
-### Step 3 — Test external access
-
-From a phone on mobile data (not your WiFi):
-```
-vlc http://myradio.duckdns.org:8000/stream
-```
-
----
-
-## If ACT blocks inbound ports (backup plan)
-
-Use **Cloudflare Tunnel** — bypasses NAT and port blocking entirely:
-
-```bash
-# Install cloudflared
-wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-sudo dpkg -i cloudflared-linux-amd64.deb
-
-# Authenticate (opens browser)
-cloudflared tunnel login
-
-# Create a tunnel
-cloudflared tunnel create myradio
-
-# Route traffic
-cloudflared tunnel route dns myradio stream.yourdomain.com
-
-# Run it
-cloudflared tunnel run myradio
-```
-
-This gives you a public HTTPS URL with no open ports.
-Note: Cloudflare Tunnels don't support raw audio streaming well for
-high-bitrate streams — use port forwarding if ACT allows it.
+Port 4533 is Navidrome (for Subsonic apps like Symfonium/Tempo), not a VLC stream.
 
 ---
 
@@ -232,7 +174,8 @@ radiostack/
 ├── music/                   ← your audio files live here
 ├── playlists/               ← .m3u playlist files live here
 └── scripts/
-    └── duckdns.sh           ← dynamic DNS updater
+    ├── radio.sh             ← `radio` command (up/down/status/skip/play)
+    └── gen-icecast-config.sh ← renders icecast.xml from .env
 ```
 
 ---
