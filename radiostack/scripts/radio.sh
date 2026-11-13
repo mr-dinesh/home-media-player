@@ -31,7 +31,7 @@ gui() { [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] && [ -z "${SSH_CONNECTION:-}" 
 
 say() {  # zenity when launched from the icon, plain text in a terminal or over ssh
   if ! gui; then echo "$1"
-  else zenity --info --no-wrap --title="Radio" --text="$1" --timeout=8 2>/dev/null; fi
+  else zenity --info --no-wrap --title="Radio" --text="$1" --timeout=8 2>/dev/null || true; fi  # 5 = timed out
 }
 
 streaming() {  # true if Icecast is serving MP3 on /stream
