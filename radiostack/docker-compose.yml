@@ -27,6 +27,8 @@ services:
     volumes:
       - ./liquidsoap/radio.liq:/etc/liquidsoap/radio.liq:ro
       - /home/tester/Music:/music:ro
+      # Kept outside ~/Music so Navidrome doesn't index it; Sivers.m3u uses /sivers/ paths.
+      - /home/tester/Music-Sivers:/sivers:ro
       - ./playlists:/playlists
     command: ["/etc/liquidsoap/radio.liq"]
     networks:
