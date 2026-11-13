@@ -25,8 +25,12 @@ ok()   { echo "${G}✔${N} $*"; }
 warn() { echo "${Y}!${N} $*"; }
 die()  { echo "${R}✘${N} $*" >&2; exit 1; }
 
-say() {  # zenity when launched from the icon, plain text in a terminal
-  if [ -t 1 ] || ! command -v zenity >/dev/null; then echo "$1"
+# Dialogs only when launched from the desktop icon: a display, no ssh, no terminal.
+gui() { [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] && [ -z "${SSH_CONNECTION:-}" ] \
+        && [ ! -t 1 ] && command -v zenity >/dev/null; }
+
+say() {  # zenity when launched from the icon, plain text in a terminal or over ssh
+  if ! gui; then echo "$1"
   else zenity --info --no-wrap --title="Radio" --text="$1" --timeout=8 2>/dev/null; fi
 }
 
@@ -67,8 +71,19 @@ urls() {
   echo "${D}  Navidrome   http://${ts:-$lan}:4533  (for Symfonium/Tempo, not VLC)${N}"
 }
 
+ensure_docker() {  # hermes-lowpower stops docker.socket + docker.service; bring the daemon back
+  docker info >/dev/null 2>&1 && return
+  echo "docker is stopped (low-power mode stops it), starting it…"
+  local sudo=(sudo)
+  gui && sudo=(env SUDO_ASKPASS="$HOME/.local/bin/zenity-askpass" ASKPASS_TITLE="Home Radio: start Docker (sudo password)" sudo -A)  # icon: password box
+  "${sudo[@]}" systemctl start docker.socket docker.service \
+    || die "couldn't start docker (password cancelled?)"
+  local i; for i in $(seq 1 15); do docker info >/dev/null 2>&1 && return; sleep 1; done
+  die "docker started but isn't answering; check: journalctl -u docker -b"
+}
+
 preflight() {
-  docker info >/dev/null 2>&1 || die "docker isn't reachable (is the daemon running?)"
+  ensure_docker
   [ -f "$STACK_DIR/.env" ] || die ".env missing: cp .env.example .env, fill it in, run scripts/gen-icecast-config.sh"
   [ -f "$ICECAST_XML" ] || die "icecast.xml missing: run scripts/gen-icecast-config.sh"
   # Icecast runs as uid 101 in its container and can't read a mode-600 file without this.
