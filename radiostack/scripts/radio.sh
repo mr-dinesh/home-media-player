@@ -163,9 +163,15 @@ cmd_play() {
 }
 
 cmd_toggle() {
+  # A second icon click while the first is still starting would see the stream
+  # live and stop it again. Hold a lock so overlapping clicks are ignored.
+  exec 9>"${XDG_RUNTIME_DIR:-/tmp}/radio-toggle.lock"
+  flock -n 9 || exit 0
   if streaming; then cmd_down >/dev/null; say "Radio stopped."
   else
     local out
+    command -v notify-send >/dev/null && notify-send -t 4000 "Radio" "Starting… (takes up to 30 s)" 2>/dev/null
+
     if out=$(cmd_up 2>&1); then say "$(sed 's/\x1b\[[0-9;]*m//g' <<<"$out")"
     else say "Radio failed to start:
 $(sed 's/\x1b\[[0-9;]*m//g' <<<"$out" | tail -8)"; exit 1; fi
